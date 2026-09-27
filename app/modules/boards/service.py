@@ -27,7 +27,7 @@ def get_board(session: Session, board_id: int) -> Board | None:
 # Takes the board the router already loaded, so it isn't fetched twice. Changing
 # that tracked object is what gets saved - a copy would be ignored by commit.
 def update_board(session: Session, board: Board, data: BoardUpdate) -> Board:
-    board.sqlmodel_update(data.model_dump(exclude_unset=True))
+    board.sqlmodel_update(data.model_dump(exclude_unset=True, exclude_none=True))
     session.add(board)
     session.commit()
     session.refresh(board)
