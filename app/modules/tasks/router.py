@@ -21,11 +21,14 @@ def create_one(board_id: int, data: TaskCreate, session: SessionDep):
 
 @router.get("/boards/{board_id}/tasks", response_model=list[TaskPublic])
 def get_all_board_tasks(board_id: int, session: SessionDep):
+    # Without this, a missing board would return [] and look like an empty one
     board = get_board(session, board_id)
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
     return get_board_tasks(session, board)
 
+# Single-task routes aren't nested - the task id alone is unique, so the client
+# doesn't need to know which board it's on.
 @router.get("/tasks/{task_id}", response_model=TaskPublic)
 def get_one(task_id: int, session: SessionDep):
     task = get_task(session, task_id)
@@ -35,6 +38,8 @@ def get_one(task_id: int, session: SessionDep):
 
 @router.patch("/tasks/{task_id}", response_model=TaskPublic)
 def update_one(task_id: int, data: TaskUpdate, session: SessionDep):
+    # Only when the task is being moved - check the new board exists, or the
+    # foreign key would fail on commit and the client would get a 500.
     if data.board_id is not None:
         board = get_board(session, data.board_id)
         if not board:

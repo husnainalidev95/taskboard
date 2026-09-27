@@ -13,6 +13,8 @@ def create_task(session: Session, board: Board, data: TaskCreate) -> Task:
     session.refresh(task)
     return task
 
+# Only this board's tasks - without the where() this would return every task
+# in the database, across all boards.
 def get_board_tasks(session: Session, board: Board) -> list[Task]:
     return session.exec(select(Task).where(Task.board_id == board.id)).all()
 
@@ -20,6 +22,8 @@ def get_task(session: Session, task_id: int) -> Task | None:
     return session.get(Task, task_id)
 
 def update_task(session: Session, task: Task, data: TaskUpdate) -> Task:
+    # exclude_unset keeps fields the client didn't send from being wiped.
+    # exclude_none drops explicit nulls, which Postgres would reject as NOT NULL.
     task.sqlmodel_update(data.model_dump(exclude_unset=True, exclude_none=True))
     session.add(task)
     session.commit()
