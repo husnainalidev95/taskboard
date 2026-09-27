@@ -24,8 +24,14 @@ and I understand it.
 ### Where I am now
 
 Step 1, in progress. Postgres, Alembic migrations, and the `Board` / `Task` models exist.
-Boards have full CRUD (`POST`, `GET` list, `GET` by id, `PATCH`, `DELETE`) under `/boards`.
-Tasks are next, built the same way in `app/modules/tasks/`.
+CRUD endpoints are done for both:
+
+- **Boards** — `POST /boards`, `GET /boards`, `GET/PATCH/DELETE /boards/{id}`
+- **Tasks** — shallow nesting: `POST/GET /boards/{board_id}/tasks` to create and list,
+  `GET/PATCH/DELETE /tasks/{id}` for a single task. PATCH can move a task to another board.
+
+Deleting a board also deletes its tasks (`ON DELETE CASCADE` on `task.board_id`).
+Tests are next (pytest + `TestClient`), then step 2.
 
 Docker (step 4) came early because it was the easiest way to run Postgres locally.
 It gets revisited properly when Redis and the worker land.
@@ -73,6 +79,10 @@ make migrate
 Always read a generated migration before applying it — autogenerate guesses, especially
 around enums, renames, and server defaults.
 
+Constraint and index names come from the naming convention in
+[app/models/\_\_init\_\_.py](app/models/__init__.py). Without it, Postgres picks the names and
+any migration that drops or changes a constraint fails with "constraint name is None".
+
 ## Layout
 
 ```
@@ -84,9 +94,12 @@ app/
       router.py        # routes (the "controller") - HTTP concerns, 404s
       service.py       # database work, takes the session as an argument
       schemas.py       # request/response shapes (BoardCreate, BoardUpdate, BoardPublic)
-    tasks/             # next, same structure
+    tasks/             # same structure; routes span /boards/{id}/tasks and /tasks/{id}
+      router.py
+      service.py
+      schemas.py       # TaskCreate, TaskUpdate, TaskPublic
   models/
-    __init__.py        # imports every model so Alembic can see its table
+    __init__.py        # constraint naming convention + imports every model for Alembic
     board.py           # Board table
     task.py            # Task table + Status enum
   alembic/
